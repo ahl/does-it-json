@@ -507,8 +507,14 @@ pub fn validate_schema_object(
     }
 
     if let Some(reference) = reference {
+        let idx = reference.rfind('/').ok_or_else(|| Error::InvalidSchema {
+            path: path.to_string(),
+            details: format!("invalid reference: {}", reference),
+        })?;
+        let ref_name = &reference[idx + 1..];
+
         let ref_schema = definitions
-            .get(reference)
+            .get(ref_name)
             .ok_or_else(|| Error::InvalidSchema {
                 path: path.to_string(),
                 details: format!("invalid reference: {}", reference),
