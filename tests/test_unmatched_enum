@@ -1,0 +1,22 @@
+error: "Value" did not conform to the schema at $.oneOf: value validated against 0 of 1 `oneOf` schemas (rather than 1)
+schema: {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "UnmatchedEnum",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "broken"
+      ],
+      "properties": {
+        "broken": {
+          "type": "string",
+          "enum": [
+            "Value"
+          ]
+        }
+      }
+    }
+  ]
+}
+value: "Value"
