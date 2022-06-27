@@ -303,7 +303,11 @@ pub fn validate_schema_object(
             }
         }
         if let Some(pattern) = pattern {
-            let regex = Regex::new(pattern).map_err(|_| Error::InvalidSchema {
+            // ECMA 262 requires the '/' to be escaped whereas Regex does not
+            // allow it. We convert sequences of '\/' into '/'.
+            let prep = Regex::new(r#"((^|[^\\])(\\\\)*)\\/"#).unwrap();
+            let pattern = prep.replace_all(pattern, "$1/");
+            let regex = Regex::new(&pattern).map_err(|_| Error::InvalidSchema {
                 path: path.to_string(),
                 details: format!("{} is not a valid regex", pattern),
             })?;
@@ -569,5 +573,51 @@ mod tests {
             Ok(()) => panic!("expected failure"),
             Err(msg) => expectorate::assert_contents("tests/test_unmatched_enum", &msg),
         }
+    }
+
+    #[test]
+    fn test_slashes() {
+        struct AmericanDate {
+            year: u32,
+            month: u32,
+            day: u32,
+        }
+
+        impl Serialize for AmericanDate {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                serializer.serialize_str(&format!("{}/{}/{}", self.day, self.month, self.year))
+            }
+        }
+
+        impl JsonSchema for AmericanDate {
+            fn schema_name() -> String {
+                "AmericanDate".to_string()
+            }
+
+            fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+                schemars::schema::SchemaObject {
+                    string: Some(
+                        schemars::schema::StringValidation {
+                            pattern: Some(r#"^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$"#.to_string()),
+                            ..Default::default()
+                        }
+                        .into(),
+                    ),
+                    ..Default::default()
+                }
+                .into()
+            }
+        }
+
+        let item = AmericanDate {
+            year: 2017,
+            month: 8,
+            day: 9,
+        };
+
+        validate_with_output(&item).unwrap()
     }
 }
