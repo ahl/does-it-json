@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use regex::Regex;
+use regress::Regex;
 use schemars::schema::{
     ArrayValidation, InstanceType, NumberValidation, ObjectValidation, Schema, SchemaObject,
     SingleOrVec, StringValidation, SubschemaValidation,
@@ -303,15 +303,11 @@ pub fn validate_schema_object(
             }
         }
         if let Some(pattern) = pattern {
-            // ECMA 262 requires the '/' to be escaped whereas Regex does not
-            // allow it. We convert sequences of '\/' into '/'.
-            let prep = Regex::new(r#"((^|[^\\])(\\\\)*)\\/"#).unwrap();
-            let pattern = prep.replace_all(pattern, "$1/");
             let regex = Regex::new(&pattern).map_err(|_| Error::InvalidSchema {
                 path: path.to_string(),
                 details: format!("{} is not a valid regex", pattern),
             })?;
-            if !regex.is_match(s) {
+            if regex.find(s).is_none() {
                 return Err(Error::InvalidValue {
                     path: path.to_string(),
                     value: value.clone(),
@@ -489,7 +485,11 @@ pub fn validate_schema_object(
             }
 
             for (pat, pat_schema) in pattern_properties {
-                if Regex::new(pat).unwrap().is_match(prop_name) {
+                let regex = Regex::new(pat).map_err(|_| Error::InvalidSchema {
+                    path: path.to_string(),
+                    details: format!("{} is not a valid regex", pat),
+                })?;
+                if regex.find(prop_name).is_none() {
                     validate_schema(&prop_path, pat_schema, definitions, prop_value)?;
                     seen = true;
                 }
