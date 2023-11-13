@@ -10,7 +10,7 @@ readme = "README.md"
 
 [dependencies]
 regress = "0.7.1"
-schemars = "0.8.15"
+schemars = "0.8.16"
 serde = "1.0.188"
 serde_json = "1.0.107"
 thiserror = "1.0.48"
